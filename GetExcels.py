@@ -17,7 +17,7 @@ for years in [2017,2018]:
     years_str = str(years)
     print(years)
     
-    for months in range(6):
+    for months in range(12):
         print(months)
         
         if len(str(months + 1)) < 2:
@@ -57,7 +57,7 @@ for years in [2017,2018]:
                         continue
             
             #Opening a file to save the Excel
-            output = open(months_str + days_str +  years_str + link3, 'wb')
+            output = open(years_str + months_str + days_str  + link3, 'wb')
             
             #Writing content of the excel downloaded into the file
             output.write(resp.content)
