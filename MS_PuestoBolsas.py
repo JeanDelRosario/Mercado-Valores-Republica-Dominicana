@@ -43,7 +43,7 @@ for i in range(len(excels)):
     #Se eligen las filas entre la segunda vez que aparece la palabra participante y la ultima que aparece total
     row = list(range(row[1]+1,row[2]-1))
     
-    data1 = data.iloc[row,[0,2,3,4,5,9]]
+    data1 = data.iloc[row,[0,2,3,4,5,6]]
     data1.columns = ['PUESTO'] + columns_names
     data1['FECHA_CORTE'] = excels[i][0:8]
 
