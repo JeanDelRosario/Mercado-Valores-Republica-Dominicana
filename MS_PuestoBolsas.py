@@ -55,9 +55,11 @@ for i in range(len(excels)):
     
 inversiones2_sorted = inversiones2.sort_values(['PUESTO','FECHA_CORTE'])
 
-inversiones2_sorted['MES'] = inversiones2_sorted['FECHA_CORTE'].str[0:2]
+inversiones2_sorted['MES'] = inversiones2_sorted['FECHA_CORTE'].str[4:6]
 
-inversiones2_sorted['MS_RF_DIARIO'] = inversiones2_sorted.groupby(['PUESTO','MES'])['MS_RF_AC_MES'].diff()
+inversiones2_sorted['ANO'] = inversiones2_sorted['FECHA_CORTE'].str[:4]
+
+inversiones2_sorted['MS_RF_DIARIO'] = inversiones2_sorted.groupby(['PUESTO','ANO','MES'])['MS_RF_AC_MES'].diff()
 
 inversiones2_sorted['MS_RF_DIARIO'][inversiones2_sorted['MS_RF_DIARIO'].isnull()]=inversiones2_sorted['MS_RF_AC_MES'][inversiones2_sorted['MS_RF_DIARIO'].isnull()]
 
