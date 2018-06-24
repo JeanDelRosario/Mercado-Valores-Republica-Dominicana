@@ -1,23 +1,34 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Sun Jun 17 02:15:23 2018
 
-@author: jeancarlos
-"""
+# coding: utf-8
+
+# In[ ]:
+
+
 import os
-import pandas as pd
 import numpy as np
+import pandas as pd
+
+
+# In[ ]:
 
 
 excels = os.listdir('/home/jeancarlos/Desktop/InversionesReservas/Excels')
 
-columns_names = ['MS_RF_USD','MS_RF_USD_DOP','MS_RF_DOP','MS_RF_AC_MES','MS_RF_AC_ANO']
 
-inversiones2 = pd.DataFrame(columns=['PUESTO']+columns_names+['FECHA_CORTE'])
+# In[ ]:
 
-columns = []
-#Competidores
+
+#En esta parte se creera la tabla para obtener lo transado diario en el mercado secundario
+#Tanto renta fija como renta variable (Sin incluir market makers)
+columns = ['TIPO_RENTA','MS_USD','MS_USD_DOP','MS_DOP','TOTAL_DOP', 'FECHA_CORTE']
+    
+inversiones = pd.DataFrame(columns=columns)
+
+
+# In[ ]:
+
+
 for i in range(len(excels)):
     workbook = pd.ExcelFile('/home/jeancarlos/Desktop/InversionesReservas/Excels/'+excels[i])
     
@@ -28,39 +39,103 @@ for i in range(len(excels)):
     #nrows = 70
     #0
     # subtract the number of rows to read from the total number of rows (and another 1 for the header)
-    data = pd.read_excel(workbook, sheet_name = 'BB_RFMSVTPBolsa')
+    data = pd.read_excel(workbook, sheet_name = 'BB_ResumenGeneralMercado')
     
-    row = np.where(data.iloc[:,0].str.contains('Participante|Total', na=False))[0]
+    row = np.where(data['Unnamed: 2'].str.contains('Mdo. Secundario RF|Mdo. Secundario RV', na=False))[0]
     
-    #Lo siguiente es para elegir siempre las filas que solo contengan informaciones de los puestos de bolsas
+    #Buscando la primera linea donde este la palabra acumulado, ya que despues de esta no 
+    #me interesa ningun valor
+    row_avoid = np.where(data.iloc[:,0].str.contains('Acumulado', na=False))[0][0]
     
-    #Primero verificamos si el documento tiene la estructura esperada
-    #Esta es: dos filas con la palabra participante y una con total
-    if len(row) != 3:
-        print('El documento '+excels[i]+' tiene un error en su estructura')
-        continue
+    #Actualizando a row
+    row = row[row<row_avoid]
     
-    #Se eligen las filas entre la segunda vez que aparece la palabra participante y la ultima que aparece total
-    row = list(range(row[1]+1,row[2]-1))
+    data1 = data.iloc[row,[2,4,5,6,7]]
     
-    data1 = data.iloc[row,[0,2,3,4,5,6]]
-    data1.columns = ['PUESTO'] + columns_names
     data1['FECHA_CORTE'] = excels[i][0:8]
-
-    inversiones2 = pd.concat([inversiones2, data1], axis = 0)
+    
+    data1.columns = inversiones.columns
+    
+    inversiones = pd.concat([inversiones, data1], axis = 0, ignore_index=True)
     
     if i % 10 == 0:
         print(i)
+
+
+# In[ ]:
+
+
+inversiones['RENTA'] = np.where(inversiones['TIPO_RENTA'].str.contains('RF'), 1, 2) #1 Renta Fija, 2 Renta Variable
+inversiones.loc[:,'MARKET_MAKERS'] = 0
+inversiones = inversiones.iloc[:,1:]
+
+
+# In[ ]:
+
+
+inversiones
+
+
+# In[ ]:
+
+
+#Se creera una tabla con lo transado diario por el programa market makers de Ministerio de Hacienda
+columns = ['MS_USD','MS_USD_DOP','MS_DOP','TOTAL_DOP', 'FECHA_CORTE']
     
+market_makers = pd.DataFrame(columns=columns)
+
+
+# In[ ]:
+
+
+for i in range(len(excels)):
+    workbook = pd.ExcelFile('/home/jeancarlos/Desktop/InversionesReservas/Excels/'+excels[i])
     
-inversiones2_sorted = inversiones2.sort_values(['PUESTO','FECHA_CORTE'])
+    # get the total number of rows
+    #rows = workbook.book.sheet_by_name('BB_ResumenGeneralMercado').nrows
+    
+    # define how many rows to read
+    #nrows = 70
+    #0
+    # subtract the number of rows to read from the total number of rows (and another 1 for the header)
+    data = pd.read_excel(workbook, sheet_name = 'BB_ResOpesRepRegistro')
+    
+    row = np.where(data.iloc[:,0].str.contains('Mercado de Renta Fija', na=False))[0]
+    
+    #Buscando la primera linea donde este la palabra acumulado, ya que despues de esta no 
+    #me interesa ningun valor
+    row_avoid = np.where(data.iloc[:,0].str.contains('Acumulado', na=False))[0][0]
+    
+    #Actualizando a row
+    row = row[row<row_avoid]
+    
+    data1 = data.iloc[row,[3,5,6,7]]
+    
+    data1['FECHA_CORTE'] = excels[i][0:8]
+    
+    data1.columns = market_makers.columns
+    
+    market_makers = pd.concat([market_makers, data1], axis = 0, ignore_index=True)
+    
+    #if i % 10 == 0:
+    #    print(i)
 
-inversiones2_sorted['MES'] = inversiones2_sorted['FECHA_CORTE'].str[0:2]
 
-inversiones2_sorted['MS_RF_DIARIO'] = inversiones2_sorted.groupby(['PUESTO','MES'])['MS_RF_AC_MES'].diff()
+# In[ ]:
 
-inversiones2_sorted['MS_RF_DIARIO'][inversiones2_sorted['MS_RF_DIARIO'].isnull()]=inversiones2_sorted['MS_RF_AC_MES'][inversiones2_sorted['MS_RF_DIARIO'].isnull()]
 
-inversiones2_sorted['MS_RF_DIARIO'][abs(inversiones2_sorted['MS_RF_DIARIO'])<0.0001] = 0
+market_makers.loc[:,'RENTA'] = 1  #1 Renta Fija
+market_makers.loc[:,'MARKET_MAKERS'] = 1
+market_makers
 
-inversiones2_sorted.to_csv('/home/jeancarlos/Desktop/InversionesReservas/inversiones.csv')
+
+# In[ ]:
+
+
+transado = pd.concat([inversiones, market_makers], axis = 0)
+
+
+# In[ ]:
+
+
+transado
